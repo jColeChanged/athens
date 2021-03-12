@@ -1,6 +1,7 @@
 (ns athens.views.settings-page
   (:require
-    ["@material-ui/icons" :as mui-icons]
+    ["@material-ui/icons/ToggleOff" :default ToggleOff]
+    ["@material-ui/icons/ToggleOn" :default ToggleOn]
     [athens.electron :as electron]
     [athens.views.buttons :refer [button]]
     [cljs-http.client :as http]
@@ -54,16 +55,26 @@
         query-url (str api email-qs email)]
     (reset! sending-request true)
     (go (let [resp (<! (http/get query-url))]
-          (if (and (:success resp) (:email_exists (:body resp)))
+          (cond
+
+            ;; Open Collective Lambda finds email associated with Athens
+            (and (:success resp) (true? (:email_exists (:body resp))))
             (do
               (js/localStorage.setItem "auth/email" email)
               (js/localStorage.setItem "auth/authed?" (str true))
               (reset! authed? true))
+
+            ;; Open Collective Lambda doesn't find email
+            (and (:success resp) (false? (:email_exists (:body resp))))
             (do
               (js/localStorage.setItem "auth/email" nil)
               (js/localStorage.setItem "auth/authed?" (str false))
               (reset! authed? false)
-              (js/alert "No OpenCollective account was found with this email address.")))
+              (js/alert "No OpenCollective account was found with this email address."))
+
+            ;; Something else, e.g. networking error
+            :else
+            (js/alert (str "Unexpected error" resp)))
           (reset! sending-request false)))))
 
 
@@ -117,10 +128,10 @@
                    :on-click #(handle-click opted-out?)}
            (if @opted-out?
              [:div {:style {:display "flex"}}
-              [:> mui-icons/ToggleOn]
+              [:> ToggleOn]
               [:span "\uD83D\uDE41 We understand."]]
              [:div {:style {:display "flex"}}
-              [:> mui-icons/ToggleOff]
+              [:> ToggleOff]
               [:span "\uD83D\uDE00 Thanks for helping make Athens better!"]])]]
 
          [:span "Analytics are delivered by "
